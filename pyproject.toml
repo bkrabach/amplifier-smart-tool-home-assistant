@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ha-analysis"
+version = "0.8.0"
+description = "Safe Home Assistant analysis and owner-delegated household control"
+readme = "src/ha_analysis/SMART_TOOL.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Home Assistant Analysis contributors" }]
+dependencies = [
+  "click>=8.1",
+  "keyring>=24.0",
+  "amplifier-agent @ git+https://github.com/microsoft/amplifier-agent@412cc176cfa5bd219254060ede7f03bbf6578005#subdirectory=packages/python",
+  "amplifier-agent-engine @ git+https://github.com/microsoft/amplifier-agent@412cc176cfa5bd219254060ede7f03bbf6578005#subdirectory=packages/engine",
+]
+
+[project.urls]
+Source = "https://github.com/bkrabach/amplifier-smart-tool-home-assistant"
+
+[project.optional-dependencies]
+agent = []
+test = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+ha-analysis = "ha_analysis.cli:main"
+ha-control = "ha_analysis.control_cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ha_analysis"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src/ha_analysis/*.py",
+  "/src/ha_analysis/SMART_TOOL.md",
+  "/tests/*.py",
+  "/pyproject.toml",
+  "/smart-tool.json",
+  "/uv.lock",
+  "/LICENSE",
+  "/.gitignore",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

@@ -1,0 +1,5 @@
+{
+  "manifest": "src/ha_analysis/SMART_TOOL.md",
+  "cli_argv": ["uv", "run", "--no-project", "src/ha_analysis/cli.py"],
+  "deterministic_smoke": ["manifest"]
+}
