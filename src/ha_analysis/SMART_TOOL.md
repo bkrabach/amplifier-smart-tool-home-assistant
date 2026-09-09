@@ -40,14 +40,17 @@ documented embedded `ha-control run` operator has bounded household tools.
 `setup`, `login`, `status`, and `logout` are management operations. They
 configure the tool and report its configuration; they perform no analysis, make
 no Home Assistant request, and return a management document rather than an
-analysis result. Successful `setup` writes the normalized origin, explicitly chosen
-transport mode, and auth mode, then disables existing control trust. `login`
-never accepts the token as a command-line argument: it prompts, or reads stdin
-with `--token-stdin`, and writes only into an approved Linux operating-system
-secret store. If no approved store is available the login fails outright; the
-token is never written to a file, an environment variable, or a plaintext
-store. `logout` deletes the local copy only and performs no Home Assistant
-revocation, so the token stays valid at Home Assistant until you delete it there.
+analysis result. Every successful `setup`, `login`, or `logout` disables
+existing local control trust. `setup` writes the normalized origin, explicitly
+chosen transport mode, and auth mode. `login` never accepts the token as a
+command-line argument: it prompts, or reads stdin with `--token-stdin`, and
+writes only into an approved Linux operating-system secret store. If no
+approved store is available the login fails outright; the token is never
+written to a file, an environment variable, or a plaintext store. `logout`
+deletes only the configured origin's local Home Assistant secret, preserving
+origin settings and owner profile records; it performs no Home Assistant
+revocation. Delete the long-lived access token separately in Home Assistant
+**Profile → Security** before logging in with a replacement when it is lost.
 
 ## Local setup
 

@@ -133,7 +133,7 @@ def main(
     tokens = list(sys.argv[1:] if argv is None else argv)
     if tokens and tokens[0] == "control":
         from ha_analysis.control_cli import main as control_main
-        return control_main(tokens[1:])
+        return control_main(tokens[1:], prog_name="ha-analysis control")
     parser = _parser()
     _refuse_unsafe_argv(parser, argv)
     args, extra = parser.parse_known_args(argv)
@@ -295,18 +295,36 @@ def _management_output_format(args: argparse.Namespace) -> str:
 def _parser() -> argparse.ArgumentParser:
     parser = _StrictArgumentParser(
         prog="ha-analysis",
-        description="Safely analyze selected Home Assistant evidence.",
+        description=(
+            "Bounded Home Assistant analysis, local connection setup, and status reporting. "
+            "Analysis commands emit JSON."
+        ),
+        epilog=(
+            "Quick zero-effect example: ha-analysis offline_analyze --evidence "
+            "'{\"example\": true}' --request '{\"analysis_kind\":\"structural_summary\"}'.\n"
+            "Direct trusted control: ha-analysis control --help.\n"
+            "Documentation: https://github.com/bkrabach/amplifier-smart-tool-home-assistant/"
+            "blob/main/docs/usage.md"
+        ),
     )
     commands = parser.add_subparsers(dest="command", parser_class=_StrictArgumentParser)
     manifest = commands.add_parser(
-        "manifest", help="Print metadata only; no Home Assistant or model activity."
+        "manifest",
+        help="Print packaged metadata only; no Home Assistant or model activity.",
+        description="Print the packaged manifest as JSON only. This is local metadata; it does not contact Home Assistant or a model.",
     )
     manifest.add_argument(
-        "--format", default="json", choices=("json",), help="Output format (json only)."
+        "--format", default="json", choices=("json",), help="Output format: json only (default: json)."
     )
 
     offline = commands.add_parser(
-        "offline_analyze", help="[deterministic] Produce a structural_summary."
+        "offline_analyze",
+        help="[deterministic] Summarize caller-supplied JSON evidence.",
+        description=(
+            "Produce a deterministic structural summary from caller-supplied JSON. "
+            "Use exactly one of --evidence or --evidence-file; stdin is not an input. "
+            "It emits JSON and does not contact Home Assistant, a model, or a credential store."
+        ),
     )
     _json_or_file(offline, "evidence", "Caller-supplied JSON evidence.")
     offline.add_argument(
@@ -316,7 +334,14 @@ def _parser() -> argparse.ArgumentParser:
     )
 
     live = commands.add_parser(
-        "inspect_live_entities", aliases=["inspect"], help="[deterministic] Read exact entity IDs only."
+        "inspect_live_entities",
+        aliases=["inspect"],
+        help="[deterministic] Read selected exact entity IDs.",
+        description=(
+            "Read only the exact entity IDs supplied in --targets. It uses the configured origin "
+            "and its stored credential unless --origin is supplied; --transport-mode requires "
+            "--origin. It emits JSON and does not discover an inventory or invoke a model."
+        ),
     )
     live.add_argument(
         "--origin",
@@ -332,17 +357,51 @@ def _parser() -> argparse.ArgumentParser:
     live.add_argument("--attributes", help="JSON array of selected top-level attribute names.")
     live.add_argument("--include-timestamps", action="store_true", help="Include valid observed timestamps.")
 
-    check = commands.add_parser("check", help="[deterministic] Check the configured Home Assistant API.")
+    check = commands.add_parser(
+        "check",
+        help="[deterministic] Validate the configured Home Assistant API.",
+        description=(
+            "Make an authenticated, read-only connection check using the configured origin and "
+            "stored credential, or an explicitly supplied --origin. --transport-mode requires "
+            "--origin. It emits JSON and does not invoke a model."
+        ),
+    )
     check.add_argument("--origin", help="Home Assistant origin URL. Defaults to setup origin.")
-    check.add_argument("--transport-mode", dest="transport_mode", choices=tuple(sorted(TRANSPORT_MODES)))
+    check.add_argument(
+        "--transport-mode",
+        dest="transport_mode",
+        choices=tuple(sorted(TRANSPORT_MODES)),
+        help="Transport mode for --origin; it cannot override the configured origin.",
+    )
 
-    find = commands.add_parser("find", help="[deterministic] Search consented entity-registry display metadata.")
+    find = commands.add_parser(
+        "find",
+        help="[deterministic] Search consented registry display metadata.",
+        description=(
+            "Read and locally filter enabled entity-registry display metadata only after the JSON "
+            "request explicitly includes inventory_consent: true. It uses the configured origin "
+            "and stored credential unless --origin is supplied; --transport-mode requires "
+            "--origin. It emits JSON, selects nothing, and invokes no model."
+        ),
+    )
     find.add_argument("--origin", help="Home Assistant origin URL. Defaults to setup origin.")
-    find.add_argument("--transport-mode", dest="transport_mode", choices=tuple(sorted(TRANSPORT_MODES)))
+    find.add_argument(
+        "--transport-mode",
+        dest="transport_mode",
+        choices=tuple(sorted(TRANSPORT_MODES)),
+        help="Transport mode for --origin; it cannot override the configured origin.",
+    )
     find.add_argument("--request", required=True, help='JSON discovery request including inventory_consent: true.')
 
     interpretation = commands.add_parser(
-        "interpret_evidence", help="[model-backed] Interpret caller-selected redacted evidence."
+        "interpret_evidence",
+        help="[model-backed] Interpret caller-selected redacted evidence.",
+        description=(
+            "Send caller-selected, redacted evidence to the explicitly selected model provider "
+            "for interpretation. Use exactly one of --selected-evidence or --selected-evidence-file; "
+            "stdin is not an input. This path does not contact Home Assistant or use tools, and "
+            "emits JSON."
+        ),
     )
     _json_or_file(interpretation, "selected-evidence", "Caller-selected JSON evidence.")
     interpretation.add_argument(
@@ -353,20 +412,26 @@ def _parser() -> argparse.ArgumentParser:
     interpretation.add_argument(
         "--model-runtime",
         choices=(MODEL_RUNTIME,),
-        help="Explicit model runtime for interpretation.",
+        help="Explicit model runtime; requires --model-provider and --model.",
     )
     interpretation.add_argument(
         "--model-provider",
-        help="Provider identifier for --model-runtime amplifier-agent.",
+        help="Provider identifier for --model-runtime amplifier-agent; required with that runtime.",
     )
     interpretation.add_argument(
         "--model",
-        help="Model identifier for --model-runtime amplifier-agent.",
+        help="Model identifier for --model-runtime amplifier-agent; required with that runtime.",
     )
 
     setup = commands.add_parser(
         "setup",
         help="[management] Record the Home Assistant origin and transport mode.",
+        description=(
+            "Record local normalized origin, transport, and authentication-mode settings. Successful "
+            "setup disables existing local control trust, does not accept a token, and does not "
+            "contact Home Assistant or a model. Output defaults to auto: text only for terminal "
+            "stdin and stdout, otherwise JSON."
+        ),
     )
     setup.add_argument(
         "--origin",
@@ -403,6 +468,13 @@ def _parser() -> argparse.ArgumentParser:
             "[management] Store a long-lived access token in the operating-system "
             "secret store. The token is never a command-line argument."
         ),
+        description=(
+            "Store an interactively supplied Home Assistant long-lived access token in the approved "
+            "operating-system secret store. A successful login disables existing local control trust. "
+            "The token is never accepted in argv, and login does not validate it with a server. Create "
+            "or revoke tokens separately in Home Assistant Profile Security. Output defaults to auto: "
+            "text only for terminal stdin and stdout, otherwise JSON."
+        ),
     )
     login.add_argument(
         "--token-stdin",
@@ -416,7 +488,13 @@ def _parser() -> argparse.ArgumentParser:
     login.static_error = LOGIN_ARGUMENT_REFUSED  # type: ignore[attr-defined]
 
     status = commands.add_parser(
-        "status", help="[management] Report configuration and credential presence."
+        "status",
+        help="[management] Report local configuration and credential presence.",
+        description=(
+            "Read local configuration and the OS credential store to report readiness; it makes no "
+            "Home Assistant request. Output defaults to auto: text only for terminal stdin and stdout, "
+            "otherwise JSON."
+        ),
     )
     _management_format(status)
     logout = commands.add_parser(
@@ -424,6 +502,12 @@ def _parser() -> argparse.ArgumentParser:
         help=(
             "[management] Delete the locally stored token. This performs no "
             "Home Assistant revocation."
+        ),
+        description=(
+            "Delete only the locally stored token and disable local control trust for future calls. "
+            "It does not contact Home Assistant, revoke a server-side token, or undo past actions; "
+            "revoke a token separately in Home Assistant Profile Security. Output defaults to auto: "
+            "text only for terminal stdin and stdout, otherwise JSON."
         ),
     )
     _management_format(logout)
@@ -435,7 +519,7 @@ def _management_format(parser: argparse.ArgumentParser) -> None:
         "--format",
         choices=("auto", "text", "json"),
         default="auto",
-        help="Output format (auto uses text only when stdin and stdout are terminals).",
+        help="Output format: auto, text, or json (default: auto; auto uses text only when stdin and stdout are terminals).",
     )
 
 
@@ -443,7 +527,11 @@ def _json_or_file(parser: argparse.ArgumentParser, name: str, help_text: str) ->
     destination = name.replace("-", "_")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(f"--{name}", dest=destination, help=help_text)
-    group.add_argument(f"--{name}-file", dest=f"{destination}_file", help="UTF-8 JSON file.")
+    group.add_argument(
+        f"--{name}-file",
+        dest=f"{destination}_file",
+        help=f"{help_text.rstrip('.')} from a UTF-8 JSON file (not stdin).",
+    )
 
 
 def _json_input(inline: str | None, file_path: str | None) -> object:

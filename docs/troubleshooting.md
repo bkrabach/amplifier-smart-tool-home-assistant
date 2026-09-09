@@ -51,17 +51,17 @@ HTTP needs the explicit `trusted_local_or_vpn` transport selection. HTTPS is
 the default. Do not treat a local-looking host name as evidence that HTTP is
 safe.
 
-Rerunning successful `ha-analysis setup` writes the three local settings fields
-and disables existing control trust, even when the origin is unchanged. Review
-the connection and make a new owner trust decision only if direct control is
-again appropriate.
+Every successful `ha-analysis setup`, `login`, or `logout` disables existing
+local control trust. Setup writes the three local settings fields even when the
+origin is unchanged. Review the connection and make a new owner trust decision
+only if direct control is again appropriate.
 
 ## Trust and direct control
 
 | Diagnostic code | Meaning | Safe next action |
 | --- | --- | --- |
 | `configuration_unavailable` | Control cannot obtain current origin and credential. | Resolve `status` diagnostics first. |
-| `control_not_trusted` | The owner has not enabled control for the current binding. | Review the target/service, then make the owner decision with `trust enable`. |
+| `control_not_trusted` | The owner has not enabled control for the current binding, or a successful setup/login/logout disabled it. | Review the target/service, then make the owner decision with `trust enable`. |
 | `control_trust_changed` | Binding changed while preparing the request. | Stop; review the changed connection and explicitly request trust again if appropriate. |
 | `trust_unavailable` | Local trust state could not be written/read safely. | Resolve the local state/storage problem; do not bypass it. |
 | `service_not_registered` | The requested service is not in current runtime metadata. | Run `ha-control actions` and choose a registered service. |
@@ -70,8 +70,9 @@ again appropriate.
 | `audit_unavailable` | Durable intent could not be recorded. | Do not bypass the audit; fix the local storage condition. |
 
 If origin, transport, or credential identity changes, control fails closed.
-Trust is not something to silently re-enable; request the owner’s deliberate
-decision after reviewing the new connection.
+`status`, checks, discovery, and other reads do not renew trust. Trust is not
+something to silently re-enable; after reviewing the current connection, make
+one deliberate owner decision before direct control is again appropriate.
 
 ## Delayed and unknown outcomes
 

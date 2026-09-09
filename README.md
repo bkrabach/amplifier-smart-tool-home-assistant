@@ -27,6 +27,12 @@ The Python package and primary analysis command are named `ha-analysis`; the
 repository is named `amplifier-smart-tool-home-assistant`. The separate
 `ha-control` command is the intentional direct-control surface.
 
+## Find help
+
+Use `ha-analysis --help`, `ha-analysis control --help`, or
+`ha-control invoke -h` to navigate the command surfaces. Both `-h` and
+`--help` work on every route.
+
 ## Start with an offline, zero-effect command
 
 This example uses caller-supplied synthetic evidence. It does not contact Home
@@ -57,8 +63,8 @@ not a model feature, and needs no AI configuration. In contrast,
 
 1. Record the Home Assistant origin. Setup stores normalized origin, transport,
    and auth-mode settings locally; it neither stores a token nor contacts Home
-   Assistant or a model. A successful rerun also disables any existing control
-   trust, including when the origin is unchanged:
+   Assistant or a model. Every successful `setup`, `login`, or `logout`
+   disables existing local control trust:
 
    ```console
    ha-analysis setup
@@ -83,7 +89,10 @@ not a model feature, and needs no AI configuration. In contrast,
 Read https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/getting-started.md
 before setup for transport, credential-store, and provider details. Read
 https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/usage.md
-for target selection and control commands.
+for target selection, advisory interpretation, and control commands.
+`interpret_evidence` selects its model runtime, provider, and model explicitly
+on that command; `ha-control agent configure` stores a selection only for the
+embedded operator.
 
 ### Enabling control is an owner decision
 

@@ -37,9 +37,14 @@ Other exported contracts support embedding and testing: `ManagementRuntime`,
 Management (`setup`, `login`, `status`, `logout`) is separate from analysis.
 It produces a management document rather than observed Home Assistant evidence.
 
-## Four flows
+## Six flows
 
 ```text
+management lifecycle
+  -> setup, login, status, or logout
+  -> local settings / approved OS secret store
+  -> management document (no Home Assistant request)
+
 offline evidence
   -> AnalysisRuntime.offline_analyze
   -> structural summary + redaction
@@ -55,6 +60,10 @@ typed direct control
   -> durable local intent -> one Home Assistant service POST
   -> bounded readback receipt
 
+caller-selected advisory evidence
+  -> redaction -> explicitly selected tool-less model interpreter
+  -> provider interpretation (no Home Assistant read)
+
 embedded operator
   -> explicit provider/model + ephemeral SDK turn
   -> owned household tools only
@@ -69,10 +78,12 @@ every imaginable external tool is prevented by a prompt.
 ## Credentials, metadata, and transport
 
 `ManagementRuntime` records a normalized origin and transport mode locally.
-Successful setup also invalidates existing control trust. `login` accepts a
-Home Assistant long-lived access token only via prompt or stdin and stores it
-in an allow-listed Linux OS secret store. The token is bound to that configured
-origin and is not forwarded to another origin.
+Every successful `setup`, `login`, or `logout` invalidates existing local
+control trust. `login` accepts a Home Assistant long-lived access token only
+via prompt or stdin and stores it in an allow-listed Linux OS secret store. The
+token is bound to that configured origin and is not forwarded to another
+origin. `logout` deletes only that local secret; it does not revoke the token
+at Home Assistant or delete origin settings or owner profile records.
 
 The secret-store allow-list accepts Secret Service/libsecret and KWallet
 backends. There is no plaintext, file, or environment fallback for the Home
@@ -105,9 +116,11 @@ proof. A service requiring a response payload is refused with
 
 The legacy advisory path is `ha-analysis interpret_evidence`. It invokes a
 model only when `--model-runtime amplifier-agent`, `--model-provider`, and
-`--model` are selected. It supplies caller-selected redacted evidence and
-configures the SDK with no tools, skills, or MCP servers; its all-tools denial
-is scoped to this advisory interpreter.
+`--model` are selected. It supplies caller-selected redacted evidence to the
+provider and configures the SDK with no tools, skills, or MCP servers; it makes
+no Home Assistant read. Its all-tools denial is scoped to this advisory
+interpreter. `ha-control agent configure` is separate: it stores the
+provider/model selection only for the embedded operator.
 
 The newer embedded path is `ha-control run`. It can use its owned household
 tools, but `--read-only` blocks invokes and `--dry-run` suppresses their POSTs:

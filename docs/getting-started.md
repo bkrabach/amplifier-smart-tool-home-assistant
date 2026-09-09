@@ -71,6 +71,8 @@ The command prompts without echoing the token and writes it only to an approved
 Linux OS secret store. Never put a Home Assistant token in chat, shell
 arguments, or a `.env` file. `--token-stdin` exists for a deliberate
 non-interactive handoff, but it still must not be a command argument.
+Successful `login` replaces any local token for the configured origin and
+disables existing local control trust.
 Home Assistant authentication and model authentication are distinct:
 
 - The Home Assistant token is stored by `login` in the approved OS secret
@@ -79,7 +81,21 @@ Home Assistant authentication and model authentication are distinct:
   provider's environment configuration. They are not placed in the household
   profile or Home Assistant credential store.
 
-## 5. Diagnose, then validate
+## 5. Rotate or recover a token
+
+To rotate a token, create its replacement in Home Assistant **Profile →
+Security**, then run `ha-analysis login` again. This replaces the local token;
+validate it with `check` and make a new trust decision only if direct control
+is needed.
+
+If a token is lost or exposed, separately delete that long-lived access token
+in Home Assistant **Profile → Security**. `ha-analysis logout` deletes only
+the configured origin's local Home Assistant secret and disables local control
+trust; it makes no Home Assistant request or server-side revocation. It does
+not delete origin settings or owner profile records. Create a replacement token
+and run `login` to resume authenticated reads.
+
+## 6. Diagnose, then validate
 
 First inspect local readiness:
 
@@ -95,7 +111,7 @@ ha-analysis check
 `check` makes one authenticated, read-only API request. A stored token is not
 proof that it is accepted until this succeeds.
 
-## 6. Discover with consent, then inspect exact IDs
+## 7. Discover with consent, then inspect exact IDs
 
 Display discovery requires an explicit consent field:
 
@@ -114,7 +130,7 @@ ha-analysis inspect \
   --include-timestamps
 ```
 
-## 7. Optionally configure a model provider
+## 8. Optionally configure a model provider
 
 Only model-backed commands need a provider/model choice. Consult your
 provider's legitimate setup documentation and export only the values it
