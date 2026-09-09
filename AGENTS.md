@@ -24,6 +24,13 @@ the pinned agent SDK/engine revision without an intentional reviewed change.
 
 - Default pytest must use no actual Home Assistant, provider, or secret-store
   calls and requires no actual keys.
+- When CLI behavior changes, check `-h` and `--help` across the complete visible
+  command tree through both `ha-analysis` and `ha-control`, then run:
+
+  ```console
+  uv run --locked --extra test pytest tests/test_cli_help.py tests/test_repository_files.py
+  ```
+
 - A live model harness is explicit opt-in, may cost money, and never runs in PR
   automation.
 - A real keyring test is opt-in; a normal-run skip is not proof of physical
@@ -46,5 +53,7 @@ the pinned agent SDK/engine revision without an intentional reviewed change.
 
 - Update docs with behavior changes and verify README/docs links.
 - Build wheel and sdist when docs or packaging change.
+- Before publication, regenerate a fresh build and compare packaged
+  documentation with its source counterparts.
 - Keep commits concise and conventional-style when commits are requested.
 - Follow `CONTRIBUTING.md`; use `SECURITY.md` for private vulnerability policy.

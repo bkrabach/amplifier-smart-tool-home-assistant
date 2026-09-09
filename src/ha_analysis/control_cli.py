@@ -58,8 +58,15 @@ def trust() -> None:
     type=click.Choice(["json", "text"]),
     default="json",
     show_default=True,
+    help="Render the result as json or concise text.",
 )
 def trust_enable(output: str) -> None:
+    """Record an explicit owner control grant for the current local binding.
+
+    The grant is local, bound to the configured origin and stored credential,
+    and does not discover devices or send a service request. Example:
+    ha-control trust enable --format json.
+    """
     _emit(ControlRuntime().enable_control(), output)
 
 
@@ -70,8 +77,14 @@ def trust_enable(output: str) -> None:
     type=click.Choice(["json", "text"]),
     default="json",
     show_default=True,
+    help="Render the result as json or concise text.",
 )
 def trust_disable(output: str) -> None:
+    """Disable local trust for all future control calls.
+
+    This changes the local grant only. Example:
+    ha-control trust disable --format json.
+    """
     _emit(ControlRuntime().disable_control(), output)
 
 
@@ -82,62 +95,96 @@ def trust_disable(output: str) -> None:
     type=click.Choice(["json", "text"]),
     default="json",
     show_default=True,
+    help="Render the result as json or concise text.",
 )
 def trust_status(output: str) -> None:
+    """Report the local trust state for the current stored configuration.
+
+    This reads local configuration and credential binding information. Example:
+    ha-control trust status --format json.
+    """
     _emit(ControlRuntime().control_status(), output)
 
 
 @cli.command("actions")
-@click.option("--domain")
+@click.option("--domain", help="Optional Home Assistant service domain to list, for example light.")
 @click.option(
     "--format",
     "output",
     type=click.Choice(["json", "text"]),
     default="json",
     show_default=True,
+    help="Render the result as json or concise text.",
 )
 def actions(domain: str | None, output: str) -> None:
+    """List registered Home Assistant service metadata without invoking a service.
+
+    --domain filters returned actions locally after the service catalog read. This
+    uses no model and sends no service POST. Example: ha-control actions --domain light.
+    """
     _emit(ControlRuntime().list_actions(domain), output)
 
 
 @cli.command("find")
-@click.option("--query", required=True)
+@click.option("--query", required=True, help="Text to match against registry display metadata.")
 @click.option(
     "--format",
     "output",
     type=click.Choice(["json", "text"]),
     default="json",
     show_default=True,
+    help="Render the result as json or concise text.",
 )
 def find(query: str, output: str) -> None:
+    """Find Home Assistant registry metadata without selecting or invoking anything.
+
+    --query is a display-metadata search string, not an authorization or
+    target choice. This uses no model and sends no service POST. Example:
+    ha-control find --query "living room lamp".
+    """
     _emit(ControlRuntime().find(query), output)
 
 
 @cli.command("resolve")
-@click.option("--selector", required=True)
+@click.option(
+    "--selector",
+    required=True,
+    help="JSON object with exactly one key: entity_id, name, area_id, device_id, or label_id.",
+)
 @click.option(
     "--format",
     "output",
     type=click.Choice(["json", "text"]),
     default="json",
     show_default=True,
+    help="Render the result as json or concise text.",
 )
 def resolve(selector: str, output: str) -> None:
+    """Resolve one explicit JSON selector through Home Assistant registry metadata.
+
+    --selector has exactly one of entity_id, name, area_id, device_id, or
+    label_id; it does not invoke a service. This uses no model and sends no
+    service POST. Example: ha-control resolve --selector '{"entity_id":"light.lamp"}'.
+    """
     _emit(ControlRuntime().resolve(_json(selector, "selector")), output)
 
 
 @cli.command("invoke")
 @click.argument("service")
-@click.option("--targets")
-@click.option("--selector")
-@click.option("--data", default="{}", show_default=True)
-@click.option("--dry-run", is_flag=True)
+@click.option("--targets", help="JSON array of exact entity IDs; provide exactly one target source.")
+@click.option(
+    "--selector",
+    help="JSON selector with exactly one key: entity_id, name, area_id, device_id, or label_id.",
+)
+@click.option("--data", default="{}", show_default=True, help="JSON object of service data.")
+@click.option("--dry-run", is_flag=True, help="Preview after Home Assistant reads but send no service POST.")
 @click.option(
     "--format",
     "output",
     type=click.Choice(["json", "text"]),
     default="json",
     show_default=True,
+    help="Render the result as json or concise text.",
 )
 def invoke(
     service: str,
@@ -147,6 +194,18 @@ def invoke(
     dry_run: bool,
     output: str,
 ) -> None:
+    """Invoke one registered SERVICE in domain.action form.
+
+    Provide exactly one of --targets (a JSON array) or --selector (one exact
+    selector); --data is a JSON object. Current local trust is required even for
+    --dry-run previews. A preview does Home Assistant
+    reads but no service POST; it uses no AI and is not offline. A non-preview
+    request may act once, has no retry, and has unverified or unavailable
+    readback rather than a guaranteed physical outcome. A direct script.<name>
+    accepts --targets '[]' only to name that script, never as generic “all
+    targets.” Example: ha-control invoke light.turn_on --targets
+    '["light.lamp"]' --data '{"brightness":128}' --dry-run.
+    """
     if (targets is None) == (selector is None):
         raise click.UsageError("provide exactly one of --targets or --selector")
     _emit(
@@ -163,13 +222,20 @@ def invoke(
 
 @cli.group()
 def agent() -> None:
-    """Configure and run the embedded household operator."""
+    """Configure the embedded household operator; run is a root command."""
 
 
 @agent.command("configure")
-@click.option("--provider", required=True)
-@click.option("--model", required=True)
+@click.option("--provider", required=True, help="Provider identifier to store locally.")
+@click.option("--model", required=True, help="Model identifier to store locally.")
 def agent_configure(provider: str, model: str) -> None:
+    """Store a provider and model selection locally.
+
+    --provider and --model select a future operator model; they are not
+    credentials and this command does not contact Home Assistant. Output is
+    JSON-only; there is no --format option. Example: ha-control agent configure
+    --provider openai --model MODEL.
+    """
     try:
         HouseholdProfile().configure_model(provider, model)
     except HouseholdProfileError as error:
@@ -179,6 +245,12 @@ def agent_configure(provider: str, model: str) -> None:
 
 @agent.command("status")
 def agent_status() -> None:
+    """Report locally stored operator configuration without testing connectivity.
+
+    The result counts local configuration, not provider or Home Assistant
+    availability. Output is JSON-only; there is no --format option. Example:
+    ha-control agent status.
+    """
     try:
         _operator_emit(_operator_document("agent_status", "answered", HouseholdProfile().status()), "json")
     except HouseholdProfileError as error:
@@ -187,14 +259,34 @@ def agent_status() -> None:
 
 @cli.command("run")
 @click.argument("request")
-@click.option("--read-only", is_flag=True)
-@click.option("--dry-run", is_flag=True)
-@click.option("--provider")
-@click.option("--model")
-@click.option("--format", "output", type=click.Choice(["json", "text"]), default="json", show_default=True)
+@click.option("--read-only", is_flag=True, help="Allow reads but block service invocations.")
+@click.option("--dry-run", is_flag=True, help="Preview possible actions but send no service POST.")
+@click.option("--provider", help="Per-turn provider override; otherwise use the current profile.")
+@click.option("--model", help="Per-turn model override; otherwise use the current profile.")
+@click.option(
+    "--format",
+    "output",
+    type=click.Choice(["json", "text"]),
+    default="json",
+    show_default=True,
+    help="Render the result as json or concise text.",
+)
 def run(
     request: str, read_only: bool, dry_run: bool, provider: str | None, model: str | None, output: str
 ) -> None:
+    """Run one quoted natural-language REQUEST through the configured operator.
+
+    The current profile supplies its model unless --provider and --model override
+    it for this turn. --read-only blocks invocations but may still read Home
+    Assistant and use the model; --dry-run may preview after those
+    reads without a service POST. Current trust is required for invocation and
+    previews; when both flags are supplied, read-only wins. Authorized default
+    execution is real control. Model narration is unverified and never proof of
+    a physical outcome. Provider credentials are environment variables whose
+    names, not values, are documented at
+    https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/getting-started.md.
+    Example: ha-control run "What lamps are in the living room?" --read-only.
+    """
     try:
         result = HouseholdOperator().run(
             request, provider=provider, model=model, read_only=read_only, dry_run=dry_run
@@ -211,7 +303,7 @@ def run(
 
 @cli.group(name="memory")
 def memory() -> None:
-    """Owner-only household aliases, facts, and reusable routines."""
+    """Manage local, origin-bound aliases, facts, and reusable routines."""
 
 
 def _profile_origin(control: ControlRuntime | None = None) -> str:
@@ -225,6 +317,14 @@ def _profile_origin(control: ControlRuntime | None = None) -> str:
 @click.argument("phrase")
 @click.argument("entity_ids")
 def memory_set_alias(phrase: str, entity_ids: str) -> None:
+    """Store PHRASE as a local alias for ENTITY_IDS.
+
+    ENTITY_IDS is a JSON array of exact IDs. Memory is origin-bound local
+    data: it may read a stored credential to identify that origin, makes no Home
+    Assistant request, and has no immediate effect. Output is JSON-only; there
+    is no --format option. Example: ha-control memory set-alias "lamp"
+    '["light.lamp"]'.
+    """
     try:
         HouseholdProfile().set_alias(_profile_origin(), phrase, _json(entity_ids, "entity_ids"))  # type: ignore[arg-type]
     except HouseholdProfileError as error:
@@ -236,6 +336,13 @@ def memory_set_alias(phrase: str, entity_ids: str) -> None:
 @click.argument("label")
 @click.argument("text")
 def memory_set_fact(label: str, text: str) -> None:
+    """Store local fact TEXT under LABEL.
+
+    Memory is origin-bound local data: it may read a stored credential to
+    identify that origin, makes no Home Assistant request, and has no immediate
+    effect. Output is JSON-only; there is no --format option. Example:
+    ha-control memory set-fact preferred_brightness "128".
+    """
     try:
         HouseholdProfile().set_fact(_profile_origin(), label, text)
     except HouseholdProfileError as error:
@@ -248,6 +355,15 @@ def memory_set_fact(label: str, text: str) -> None:
 @click.argument("description")
 @click.argument("steps")
 def memory_set_routine(name: str, description: str, steps: str) -> None:
+    """Store local routine STEPS under NAME with DESCRIPTION.
+
+    STEPS is a JSON array of objects containing service, targets, and data;
+    its structure is validated locally only, with no Home Assistant preflight or
+    execution. Memory may read a stored credential to identify its origin but
+    makes no Home Assistant request. Output is JSON-only; there is no --format
+    option. Example: ha-control memory set-routine bedtime "Turn off"
+    '[{"service":"light.turn_off","targets":["light.lamp"],"data":{}}]'.
+    """
     try:
         HouseholdProfile().set_routine(_profile_origin(), name, description, _json(steps, "steps"))  # type: ignore[arg-type]
     except HouseholdProfileError as error:
@@ -256,8 +372,18 @@ def memory_set_routine(name: str, description: str, steps: str) -> None:
 
 
 @memory.command("list")
-@click.option("--kind", type=click.Choice(["aliases", "facts", "routines"]))
+@click.option(
+    "--kind",
+    type=click.Choice(["aliases", "facts", "routines"]),
+    help="Optional plural record kind: aliases, facts, or routines; omit for all.",
+)
 def memory_list(kind: str | None) -> None:
+    """List local origin-bound memory records.
+
+    --kind optionally selects plural aliases, facts, or routines; omit it
+    for all records. This makes no Home Assistant request. Output is JSON-only;
+    there is no --format option. Example: ha-control memory list --kind aliases.
+    """
     try:
         _operator_emit(_operator_document("memory_list", "answered", HouseholdProfile().records(_profile_origin(), kind)), "json")
     except HouseholdProfileError as error:
@@ -268,6 +394,13 @@ def memory_list(kind: str | None) -> None:
 @click.argument("kind", type=click.Choice(["aliases", "facts", "routines"]))
 @click.argument("name")
 def memory_forget(kind: str, name: str) -> None:
+    """Remove one local NAME record of plural KIND.
+
+    KIND must be aliases, facts, or routines. Removal makes no Home
+    Assistant request, does not revoke credentials, and cannot be undone.
+    Output is JSON-only; there is no --format option. Example: ha-control memory
+    forget aliases lamp.
+    """
     try:
         removed = HouseholdProfile().forget(_profile_origin(), kind, name)
     except HouseholdProfileError as error:
@@ -311,6 +444,7 @@ def _operator_emit(document: dict[str, object], output: str) -> None:
 )
 @click.pass_context
 def plan(ctx: click.Context) -> None:
+    """Report that retired planning cannot dispatch an action; use invoke instead."""
     _emit(ControlRuntime().plan_action(), "json")
 
 
@@ -321,12 +455,15 @@ def plan(ctx: click.Context) -> None:
 )
 @click.pass_context
 def execute(ctx: click.Context) -> None:
+    """Report that retired execution cannot dispatch an action; use invoke instead."""
     _emit(ControlRuntime().execute_action(), "json")
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, prog_name: str = "ha-control") -> int:
+    """Run the Click adapter with an optional embedding program name."""
+
     try:
-        cli.main(args=argv, prog_name="ha-control", standalone_mode=False)
+        cli.main(args=argv, prog_name=prog_name, standalone_mode=False)
     except click.ClickException as error:
         error.show()
         return error.exit_code

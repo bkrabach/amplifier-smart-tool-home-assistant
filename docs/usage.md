@@ -4,6 +4,26 @@ Use `ha-analysis` for bounded analysis and `ha-control` for the separately
 enabled control surface. Examples use only synthetic living-room lamps and
 study/media entities.
 
+## Command index
+
+Use `-h` or `--help` for exact option grammar. `ha-analysis control` and
+`ha-control` expose the same control commands.
+
+| Entry point | Commands | Purpose |
+| --- | --- | --- |
+| `ha-analysis` | `manifest` | Print packaged smart-tool metadata locally. |
+| `ha-analysis` | `offline_analyze`; `inspect_live_entities` (`inspect`); `check`; `find` | Offline analysis or bounded Home Assistant reads. |
+| `ha-analysis` | `interpret_evidence` | Advisory interpretation of caller-selected evidence. |
+| `ha-analysis` | `setup`; `login`; `status`; `logout` | Local origin and credential lifecycle management. |
+| `ha-control` | `trust enable\|disable\|status`; `actions`; `find`; `resolve`; `invoke` | Enable, discover, select, and directly invoke bounded control. |
+| `ha-control` | `agent configure\|status`; `run`; `memory set-alias\|set-fact\|set-routine\|list\|forget` | Configure or run the embedded operator and manage its local records. |
+
+`ha-analysis manifest` emits the packaged `SMART_TOOL.md` front matter with
+the closed fields `smart_tool_format`, `name`, `version`, `description`,
+`use_cases`, and `platforms`; it has no Home Assistant or model activity. In a
+source checkout, `smart-tool.json` points to that manifest and the
+`src/ha_analysis/cli.py` source-tree command.
+
 ## Analysis commands
 
 `offline_analyze` is deterministic and does not touch Home Assistant or a
@@ -36,6 +56,27 @@ and does not select or inspect any returned ID automatically:
 ha-analysis find \
   --request '{"query":"study","inventory_consent":true,"limit":20}'
 ```
+
+## Interpret selected evidence (advisory)
+
+`interpret_evidence` accepts only caller-selected JSON. It redacts that
+evidence before sending it to the explicitly selected provider in a tool-less
+advisory session; it does not make a Home Assistant request, but it is not
+offline because it calls the provider.
+
+```console
+ha-analysis interpret_evidence \
+  --selected-evidence '[{"entity_id":"light.living_room_lamp_1","state":"on","attributes":{"brightness":128}}]' \
+  --request '{"interpretation_kind":"advice"}' \
+  --model-runtime amplifier-agent \
+  --model-provider PROVIDER \
+  --model MODEL
+```
+
+`interpretation_kind` is any non-empty caller label, not a fixed enum.
+Provider credentials come from the environment variables listed in
+https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/getting-started.md,
+not from Home Assistant or the local household profile.
 
 ## Discover, resolve, then invoke
 
@@ -87,25 +128,54 @@ by the configured integration's runtime service metadata and target
 capabilities. `invoke` needs exactly one of `--targets` or `--selector`; it is
 not an AI command and no model configuration is involved.
 
-## Routines and aliases are explicit records
+### Registered scripts without a target entity
 
-The model cannot remember household terminology by itself. An owner may store
-an alias or routine explicitly, and these records are bound to the current
-origin:
+A registered direct script service such as the synthetic
+`script.study_media` may use an empty target array. This exception applies to
+`script.<name>`, not `script.turn_on`, `script.turn_off`, or `script.toggle`;
+the service must still be registered and local control trust must be enabled.
+
+```console
+ha-control invoke script.study_media --targets '[]' --data '{}' --dry-run
+```
+
+This preview sends no service POST, but it still performs Home Assistant reads
+to validate the registered service. It is not an offline command, and the
+example does not assert that a script with this name exists.
+
+## Local aliases, facts, and routines
+
+The model does not automatically write household terminology. Only an owner
+can create these local, current-origin records:
 
 ```console
 ha-control memory set-alias \
   "living room lamps" \
   '["light.living_room_lamp_1","light.living_room_lamp_2"]'
 
+ha-control memory set-fact \
+  "reading preference" \
+  "Use warm lamp colors for reading"
+
 ha-control memory set-routine \
   "study media" \
   "Start synthetic study media" \
   '[{"service":"remote.turn_on","targets":["remote.study_media"],"data":{"activity":"Streaming"}}]'
 ```
-Use `ha-control memory list` to see records and `memory forget KIND NAME` to
-remove one. A routine holds validated stored steps; it is not a scheduler or an
-ongoing conversation.
+
+| Operation | Exact grammar |
+| --- | --- |
+| Store an alias | `set-alias PHRASE ENTITY_IDS_JSON` |
+| Store a fact | `set-fact LABEL TEXT` |
+| Store a routine | `set-routine NAME DESCRIPTION STEPS_JSON` |
+| List records | `list [--kind aliases\|facts\|routines]` |
+| Delete a record | `forget {aliases\|facts\|routines} NAME` |
+
+`list` reads local records without writing them. `forget` deletes only one
+local record; it is neither device undo nor Home Assistant token revocation.
+Routine structure is validated when stored; runtime service and target
+preflight happens only when that routine is run. Routines are reusable steps,
+not a scheduler or ongoing conversation.
 
 ## Embedded operator
 
@@ -115,6 +185,8 @@ Configure a provider and model explicitly, then begin read-only:
 ha-control agent configure --provider PROVIDER --model MODEL
 ha-control run "What lamps are in the living room?" --read-only --format json
 ```
+`agent configure` stores only the embedded operator's provider/model selection;
+it does not configure `interpret_evidence`.
 `--read-only` permits bounded reads but blocks mutation. `--dry-run` can
 inspect and preview would-be operations without POSTing; both modes may still
 use the selected model provider and are not offline.
