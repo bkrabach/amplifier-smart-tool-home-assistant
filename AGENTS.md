@@ -28,6 +28,8 @@ the pinned agent SDK/engine revision without an intentional reviewed change.
   automation.
 - A real keyring test is opt-in; a normal-run skip is not proof of physical
   backend behavior.
+- Tests feeding non-UTF-8 stdin must explicitly set `PYTHONIOENCODING` and
+  assert the distinct `strict` and `surrogateescape` outcomes.
 - Repository/doc smoke tests check links and standard repository files.
 
 ## Public-content rules
