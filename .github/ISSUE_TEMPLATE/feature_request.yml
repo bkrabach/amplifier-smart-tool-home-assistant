@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an outcome that would improve this tool.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: Do not include tokens, device inventory, household data, or raw logs.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe the outcome you are trying to achieve.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Explain what would be better if this were supported.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Optional. Use only sanitized, synthetic examples.

@@ -32,21 +32,22 @@ IDs. `interpret_evidence` is explicitly model-backed and needs an
 injected interpreter. The required `amplifier-agent` runtime is selected only
 with `--model-runtime amplifier-agent --model-provider PROVIDER --model MODEL`;
 the default has no model provider. The package requires Python 3.12 or newer.
-Its agent sessions are ephemeral, run from an explicitly named
-storage root, and deny every requested tool before it can execute.
-That all-tools denial applies to the legacy advisory interpreter only.
+The legacy advisory interpreter runs one ephemeral session with no tools,
+skills, or MCP servers and denies tool requests before execution. This
+tool-less restriction applies only to that advisory interpreter; the separately
+documented embedded `ha-control run` operator has bounded household tools.
 
 `setup`, `login`, `status`, and `logout` are management operations. They
 configure the tool and report its configuration; they perform no analysis, make
 no Home Assistant request, and return a management document rather than an
-analysis result. `setup` records only the origin, the explicitly chosen
-transport mode, and the auth mode. `login` never accepts the token as a
-command-line argument: it prompts, or reads stdin with `--token-stdin`, and
-writes only into an approved Linux operating-system secret store. If no approved
-store is available the login fails outright; the token is never written to a
-file, an environment variable, or a plaintext store. `logout` deletes the local
-copy only and performs no Home Assistant revocation, so the token stays valid at
-Home Assistant until you delete it there.
+analysis result. Successful `setup` writes the normalized origin, explicitly chosen
+transport mode, and auth mode, then disables existing control trust. `login`
+never accepts the token as a command-line argument: it prompts, or reads stdin
+with `--token-stdin`, and writes only into an approved Linux operating-system
+secret store. If no approved store is available the login fails outright; the
+token is never written to a file, an environment variable, or a plaintext
+store. `logout` deletes the local copy only and performs no Home Assistant
+revocation, so the token stays valid at Home Assistant until you delete it there.
 
 ## Local setup
 
@@ -71,9 +72,10 @@ ha-analysis status --format text
 ha-analysis status --format json
 ```
 
-Setup saves only the normalized origin, transport mode, and auth mode locally.
-It performs no discovery, network request, token entry, token validation, or
-model work. A stored token is not a connection, authentication, or validation.
+Successful setup saves normalized origin, transport mode, and auth mode locally,
+then disables any existing control trust—even when the origin is unchanged. It
+performs no discovery, network request, token entry, token validation, or model
+work. A stored token is not a connection, authentication, or validation.
 
 HTTPS is the default. For an HTTP URL, setup explains that future authenticated
 requests would be unencrypted and requires an explicit `y` or `yes` confirmation
@@ -95,18 +97,18 @@ Use `--interactive` to require the terminal flow (flags can seed its values), or
 `--origin`. Interactive setup requires both stdin and stderr to be terminals,
 while stdout may be redirected.
 
-`find --request '{"query":"kitchen","inventory_consent":true}'` searches a literal
+`find --request '{"query":"living room","inventory_consent":true}'` searches a literal
 name/ID substring; it defaults to 20 results and permits 1 through 100. It never
 falls back to all states, subscribes, invokes a model, or automatically inspects a
-returned ID. `inspect --targets '["light.kitchen"]' --attributes
+returned ID. `inspect --targets '["light.living_room_lamp_1"]' --attributes
 '["friendly_name","unit_of_measurement"]' --include-timestamps` returns only the
 selected present fields and valid timestamps.
 
-The tool does not automatically discover entities, invoke services, mutate state, read
-history/cameras/logbooks, or claim physical-world outcomes. It does not
-implement OAuth, client IDs, callback listeners, token refresh, server-side
-revocation, account provisioning, or credential storage on any platform other
-than Linux.
+The read-only analysis commands do not automatically discover entities, invoke
+services, mutate state, read history/cameras/logbooks, or claim physical-world
+outcomes. The package does not implement OAuth, client IDs, callback listeners,
+token refresh, server-side revocation, account provisioning, or credential
+storage on any platform other than Linux.
 
 ## Direct household control
 
@@ -162,12 +164,12 @@ shell/filesystem/browser/MCP tools. Configure a provider and model separately
 (credentials remain provider environment configuration, never profile data):
 
 ```console
-ha-control agent configure --provider openai --model gpt-5.6-terra
+ha-control agent configure --provider PROVIDER --model MODEL
 ha-control memory set-alias "living room lamps" '["light.living_room_lamp_1","light.living_room_lamp_2"]'
-ha-control memory set-routine "evening media" "Synthetic media setup" '[{"service":"remote.turn_on","targets":["remote.living_room_media"],"data":{"activity":"Streaming"}},{"service":"scene.turn_on","targets":["scene.living_room_cinema"],"data":{}}]'
+ha-control memory set-routine "study media" "Synthetic media setup" '[{"service":"remote.turn_on","targets":["remote.study_media"],"data":{"activity":"Streaming"}},{"service":"scene.turn_on","targets":["scene.study_media"],"data":{}}]'
 ha-control run "What lights are in the living room?" --read-only --format json
 ha-control run "Set the living room lamps red" --dry-run --format json
-ha-control run "Start evening media" --format json
+ha-control run "Start study media" --format json
 ```
 
 Aliases, facts, and routines are owner-only local records bound to the
@@ -204,11 +206,21 @@ Python 3.12 is the packaging floor. The required `amplifier-agent` binding and
 development/install resolutions. The retained empty `agent` extra is only
 compatibility for older install commands, not an optional runtime.
 
+## Public documentation
+
+This packaged manifest is installed without the repository documentation tree.
+Use these public absolute links for fuller guidance:
+
+- https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/getting-started.md
+- https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/usage.md
+- https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/architecture.md
+- https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/troubleshooting.md
+
 For an authorized provider-only evaluation, run the synthetic loopback harness;
 it never loads real HA configuration, keyring records, or credentials. The
 provider/model pair is supplied explicitly and the output is limited to the
 synthetic evaluation:
 
 ```console
-python tests/run_operator_evaluation.py --provider openai --model gpt-5.6-terra --output ./evaluation-output
+python tests/run_operator_evaluation.py --provider PROVIDER --model MODEL --output ./evaluation-output
 ```

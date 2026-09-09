@@ -19,6 +19,8 @@ dependencies = [
 
 [project.urls]
 Source = "https://github.com/bkrabach/amplifier-smart-tool-home-assistant"
+Documentation = "https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/getting-started.md"
+Issues = "https://github.com/bkrabach/amplifier-smart-tool-home-assistant/issues"
 
 [project.optional-dependencies]
 agent = []
@@ -41,6 +43,24 @@ include = [
   "/uv.lock",
   "/LICENSE",
   "/.gitignore",
+  "/README.md",
+  "/CONTRIBUTING.md",
+  "/AGENTS.md",
+  "/SECURITY.md",
+  "/SUPPORT.md",
+  "/CODE_OF_CONDUCT.md",
+  "/docs/getting-started.md",
+  "/docs/usage.md",
+  "/docs/architecture.md",
+  "/docs/troubleshooting.md",
+  "/.editorconfig",
+  "/.gitattributes",
+  "/.github/CODEOWNERS",
+  "/.github/PULL_REQUEST_TEMPLATE.md",
+  "/.github/ISSUE_TEMPLATE/bug_report.yml",
+  "/.github/ISSUE_TEMPLATE/feature_request.yml",
+  "/.github/ISSUE_TEMPLATE/config.yml",
+  "/.github/workflows/ci.yml",
 ]
 
 [tool.hatch.metadata]

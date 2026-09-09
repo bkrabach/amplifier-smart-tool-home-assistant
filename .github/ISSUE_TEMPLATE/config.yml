@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability privately
+    about: Do not include security details in a public issue.
+    url: https://github.com/bkrabach/amplifier-smart-tool-home-assistant/security/advisories/new
+  - name: Support guidance
+    about: Read the support policy before opening an issue.
+    url: https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/SUPPORT.md
