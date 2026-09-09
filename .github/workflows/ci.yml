@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: false
+      - name: Install locked test dependencies
+        run: uv sync --locked --extra test
+      - name: Check lockfile
+        run: uv lock --check
+      - name: Run isolated tests
+        run: uv run --locked --extra test pytest
+      - name: Build source distribution and wheel
+        run: uv build --out-dir "$RUNNER_TEMP/dist"
+      - name: Validate source distribution contents
+        run: |
+          uv run --locked --extra test python - "$RUNNER_TEMP/dist" <<'PY'
+          from pathlib import Path
+          import runpy
+          import sys
+
+          archive = next(Path(sys.argv[1]).glob("*.tar.gz"))
+          validate_sdist = runpy.run_path("tests/test_repository_files.py")["validate_sdist"]
+          validate_sdist(archive)
+          PY

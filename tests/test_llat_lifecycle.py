@@ -1976,17 +1976,20 @@ def test_installed_cli_configuration_flow_reports_honestly_without_an_approved_s
 
 
 @pytest.mark.parametrize(
-    ("supplied", "code"),
+    ("supplied", "stdin_codec", "code"),
     [
-        (b"", "empty_credential"),
-        (b"\xff\xfe\xff\n", "credential_input_unavailable"),
-        (b"x" * 5000 + b"\n", "credential_too_long"),
-        (b"abc def\n", "invalid_credential"),
-        (b"   \n", "invalid_credential"),
+        (b"", None, "empty_credential"),
+        # Invalid bytes are unavailable with strict decoding and invalid token
+        # text with surrogateescape; both outcomes must fail closed.
+        (b"\xff\xfe\xff\n", "utf-8:strict", "credential_input_unavailable"),
+        (b"\xff\xfe\xff\n", "utf-8:surrogateescape", "invalid_credential"),
+        (b"x" * 5000 + b"\n", None, "credential_too_long"),
+        (b"abc def\n", None, "invalid_credential"),
+        (b"   \n", None, "invalid_credential"),
     ],
 )
 def test_login_from_stdin_refuses_bad_input_without_hanging_or_echoing(
-    tmp_path: Path, supplied: bytes, code: str
+    tmp_path: Path, supplied: bytes, stdin_codec: str | None, code: str
 ) -> None:
     """Every malformed automation input must fail fast, quietly, and non-zero."""
 
@@ -1996,6 +1999,8 @@ def test_login_from_stdin_refuses_bad_input_without_hanging_or_echoing(
         "XDG_CONFIG_HOME": str(tmp_path),
         "PYTHON_KEYRING_BACKEND": "keyring.backends.fail.Keyring",
     }
+    if stdin_codec is not None:
+        environment["PYTHONIOENCODING"] = stdin_codec
     setup = subprocess.run(
         [sys.executable, "-m", "ha_analysis.cli", "setup", "--origin", "https://ha.example:8123"],
         cwd=ROOT, env=environment, input="", text=True, capture_output=True, check=False,
