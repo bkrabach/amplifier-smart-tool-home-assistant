@@ -125,6 +125,14 @@ They are not equivalent to the offline command above.
 
 ## Documentation
 
+- Canonical vision:
+  https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/VISION.md
+  — ratified product direction for implementation, not a blanket claim of
+  real-device verification
+- Sole behavioral contract:
+  https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/contracts/home-assistant.v1.md
+  — including the bounded, redacted saved-profile disclosure for the selected
+  embedded-operator provider
 - https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/getting-started.md
   — prerequisites, credential setup, connection validation, and providers
 - https://github.com/bkrabach/amplifier-smart-tool-home-assistant/blob/main/docs/usage.md
