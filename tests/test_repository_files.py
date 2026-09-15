@@ -22,6 +22,8 @@ DOCUMENTS = (
     "docs/usage.md",
     "docs/architecture.md",
     "docs/troubleshooting.md",
+    "docs/VISION.md",
+    "contracts/home-assistant.v1.md",
     "src/ha_analysis/SMART_TOOL.md",
 )
 STANDARD_FILES = (
@@ -52,9 +54,10 @@ PUBLIC_DOCUMENTS = (*DOCUMENTS, ".github/PULL_REQUEST_TEMPLATE.md")
 
 
 def test_required_repository_files_are_nonempty() -> None:
-    missing = [path for path in STANDARD_FILES if not (ROOT / path).is_file()]
+    required_files = (*STANDARD_FILES, *DOCUMENTS[6:])
+    missing = [path for path in required_files if not (ROOT / path).is_file()]
     assert not missing, f"missing repository files: {', '.join(missing)}"
-    empty = [path for path in STANDARD_FILES if not (ROOT / path).read_text().strip()]
+    empty = [path for path in required_files if not (ROOT / path).read_text().strip()]
     assert not empty, f"empty repository files: {', '.join(empty)}"
 
 
@@ -135,15 +138,31 @@ def test_relative_link_checker_rejects_a_missing_target(tmp_path: Path) -> None:
         _validate_document_links(document, tmp_path)
 
 
-def test_validate_sdist_rejects_missing_required_member(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "absent",
+    (
+        ".github/workflows/ci.yml",
+        "docs/VISION.md",
+        "contracts/home-assistant.v1.md",
+    ),
+)
+def test_validate_sdist_rejects_missing_required_member(tmp_path: Path, absent: str) -> None:
     archive = tmp_path / "package.tar.gz"
-    _write_test_sdist(archive, absent=".github/workflows/ci.yml")
+    _write_test_sdist(archive, absent=absent)
 
     with pytest.raises(AssertionError, match="source distribution is missing"):
         validate_sdist(archive)
 
 
-@pytest.mark.parametrize("empty", [".github/workflows/ci.yml", "tests/test_repository_files.py"])
+@pytest.mark.parametrize(
+    "empty",
+    (
+        ".github/workflows/ci.yml",
+        "tests/test_repository_files.py",
+        "docs/VISION.md",
+        "contracts/home-assistant.v1.md",
+    ),
+)
 def test_validate_sdist_rejects_empty_required_member(tmp_path: Path, empty: str) -> None:
     archive = tmp_path / "package.tar.gz"
     _write_test_sdist(archive, empty=empty)

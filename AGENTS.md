@@ -3,6 +3,9 @@
 ## Scope and architecture
 
 - Keep the library authoritative; CLI modules are thin adapters.
+- Before behavior changes, read `docs/VISION.md` and the sole behavioral
+  contract, `contracts/home-assistant.v1.md`. Their presence does not infer
+  physical acceptance or a FROZEN lock.
 - `ha-analysis` uses argparse; `ha-control` uses Click.
 - Preserve strict boundaries between offline analysis, live reads, and control.
 - Do not weaken explicit trust, exact targets, redaction, or secret-store rules.

@@ -53,6 +53,8 @@ include = [
   "/docs/usage.md",
   "/docs/architecture.md",
   "/docs/troubleshooting.md",
+  "/docs/VISION.md",
+  "/contracts/home-assistant.v1.md",
   "/.editorconfig",
   "/.gitattributes",
   "/.github/CODEOWNERS",
